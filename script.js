@@ -12,6 +12,7 @@ var editingExpenseId = null;          // id of expense being edited, or null for
 
 function defaultState(){
   return {
+    authToken: "",
     userId: "",
     userName: "",
     roomId: "",
@@ -32,11 +33,29 @@ var API_BASE = (window.SPLITTRACK_API_URL || "https://splittrack-api.onrender.co
 async function apiFetch(path, options){
   var opts=options||{};
   var headers=Object.assign({},opts.headers||{});
-  if(opts.body && typeof opts.body !== "string"){ headers["Content-Type"]="application/json"; opts=Object.assign({},opts,{body:JSON.stringify(opts.body)}); }
+  if(state && state.authToken){ headers["Authorization"]="Bearer "+state.authToken; }
+  if(opts.body && typeof opts.body !== "string"){
+    headers["Content-Type"]="application/json";
+    opts=Object.assign({},opts,{body:JSON.stringify(opts.body)});
+  }
   var response;
-  try{ response=await fetch(API_BASE+path,Object.assign({},opts,{headers:headers})); }catch(err){ throw new Error("Could not reach the SplitTrack backend."); }
-  var data=null; try{ data=await response.json(); }catch(e){}
-  if(!response.ok){ var detail=data&&data.detail; if(typeof detail==="object") detail=JSON.stringify(detail); throw new Error(detail||("Request failed with status "+response.status)); }
+  try{
+    response=await fetch(API_BASE+path,Object.assign({},opts,{headers:headers}));
+  }catch(err){
+    throw new Error("Could not reach the SplitTrack backend.");
+  }
+  var data=null;
+  try{ data=await response.json(); }catch(e){}
+  if(response.status===401 && path.indexOf("/api/auth/")!==0){
+    if(state){ state.authToken=""; state.userId=""; state.userName=""; state.roomId=""; state.roomName=""; state.setupComplete=false; }
+    try{ localStorage.removeItem("splittrack_auth_token"); }catch(e){}
+    throw new Error("Your session expired. Please log in again.");
+  }
+  if(!response.ok){
+    var detail=data&&data.detail;
+    if(typeof detail==="object") detail=JSON.stringify(detail);
+    throw new Error(detail||("Request failed with status "+response.status));
+  }
   return data;
 }
 
@@ -76,6 +95,8 @@ function loadState(){
     var parsed = JSON.parse(raw);
     if(typeof parsed !== "object" || parsed === null) return defaultState();
     var s = defaultState();
+    if(typeof parsed.authToken === "string") s.authToken = parsed.authToken;
+    if(!s.authToken){ try{ s.authToken = localStorage.getItem("splittrack_auth_token") || ""; }catch(e){} }
     if(typeof parsed.userId === "string") s.userId = parsed.userId;
     if(typeof parsed.userName === "string") s.userName = parsed.userName;
     if(typeof parsed.roomId === "string") s.roomId = parsed.roomId;
@@ -1075,19 +1096,180 @@ document.getElementById("theme-toggle").addEventListener("click", function(){
 });
 
 /* ==========================================================
+   BASIC AUTHENTICATION
+   ========================================================== */
+function injectAuthUI(){
+  if(document.getElementById("auth-modal-overlay")) return;
+  var html = '' +
+    '<div class="modal-overlay" id="auth-modal-overlay">' +
+      '<div class="modal-box auth-modal-box" role="dialog" aria-modal="true" aria-labelledby="auth-modal-title">' +
+        '<div class="modal-head">' +
+          '<div>' +
+            '<div class="eyebrow" style="margin-bottom:8px;">SplitTrack account</div>' +
+            '<h3 id="auth-modal-title">Log in</h3>' +
+          '</div>' +
+          '<button type="button" class="modal-close" data-close-modal="auth-modal-overlay" aria-label="Close">✕</button>' +
+        '</div>' +
+        '<div class="modal-body">' +
+          '<p class="auth-subtitle" id="auth-modal-subtitle">Welcome back. Log in to continue.</p>' +
+          '<form id="auth-form" novalidate>' +
+            '<div class="field" id="auth-username-field">' +
+              '<label for="auth-username-input">Username</label>' +
+              '<input type="text" id="auth-username-input" autocomplete="username" maxlength="40" placeholder="Choose a username">' +
+              '<p class="field-error" id="auth-username-error">Enter a username.</p>' +
+            '</div>' +
+            '<div class="field" id="auth-password-field">' +
+              '<label for="auth-password-input">Password</label>' +
+              '<input type="password" id="auth-password-input" autocomplete="current-password" maxlength="100" placeholder="Enter your password">' +
+              '<p class="field-error" id="auth-password-error">Enter your password.</p>' +
+            '</div>' +
+            '<div class="field" id="auth-confirm-field" style="display:none;">' +
+              '<label for="auth-confirm-input">Confirm password</label>' +
+              '<input type="password" id="auth-confirm-input" autocomplete="new-password" maxlength="100" placeholder="Repeat your password">' +
+              '<p class="field-error" id="auth-confirm-error">Passwords must match.</p>' +
+            '</div>' +
+            '<p class="auth-form-error" id="auth-form-error"></p>' +
+            '<button type="submit" class="btn btn-primary btn-block" id="auth-submit-btn">Log in</button>' +
+          '</form>' +
+          '<div class="auth-switch"><span id="auth-switch-text">New to SplitTrack?</span> <button type="button" class="auth-switch-btn" id="auth-switch-btn">Create an account</button></div>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  document.body.insertAdjacentHTML("beforeend", html);
+  document.getElementById("auth-form").addEventListener("submit", handleAuthSubmit);
+  document.getElementById("auth-switch-btn").addEventListener("click", function(){ setAuthMode(authMode==="login"?"signup":"login"); });
+}
+
+var authMode="login";
+function setAuthMode(mode){
+  authMode=mode;
+  document.getElementById("auth-modal-title").textContent=mode==="login"?"Log in":"Create your account";
+  document.getElementById("auth-modal-subtitle").textContent=mode==="login"?"Welcome back. Log in to continue.":"Create a simple SplitTrack account to keep your data separate.";
+  document.getElementById("auth-submit-btn").textContent=mode==="login"?"Log in":"Create account";
+  document.getElementById("auth-switch-text").textContent=mode==="login"?"New to SplitTrack?":"Already have an account?";
+  document.getElementById("auth-switch-btn").textContent=mode==="login"?"Create an account":"Log in";
+  document.getElementById("auth-confirm-field").style.display=mode==="signup"?"block":"none";
+  document.getElementById("auth-password-input").setAttribute("autocomplete",mode==="login"?"current-password":"new-password");
+  clearAuthErrors();
+}
+function clearAuthErrors(){
+  ["auth-username-field","auth-password-field","auth-confirm-field"].forEach(function(id){var el=document.getElementById(id);if(el)el.classList.remove("invalid");});
+  var er=document.getElementById("auth-form-error"); if(er) er.textContent="";
+}
+function openAuth(mode){
+  injectAuthUI();
+  setAuthMode(mode||"login");
+  document.getElementById("auth-username-input").value="";
+  document.getElementById("auth-password-input").value="";
+  document.getElementById("auth-confirm-input").value="";
+  openModal("auth-modal-overlay");
+}
+
+async function handleAuthSubmit(e){
+  e.preventDefault();
+  clearAuthErrors();
+  var username=document.getElementById("auth-username-input").value.trim();
+  var password=document.getElementById("auth-password-input").value;
+  var confirm=document.getElementById("auth-confirm-input").value;
+  var invalid=false;
+  if(username.length<2){document.getElementById("auth-username-field").classList.add("invalid");invalid=true;}
+  if(password.length<4){document.getElementById("auth-password-field").classList.add("invalid");invalid=true;}
+  if(authMode==="signup" && password!==confirm){document.getElementById("auth-confirm-field").classList.add("invalid");invalid=true;}
+  if(invalid)return;
+
+  var btn=document.getElementById("auth-submit-btn");
+  btn.disabled=true;
+  btn.textContent=authMode==="login"?"Logging in...":"Creating account...";
+  try{
+    var result=await apiFetch(authMode==="login"?"/api/auth/login":"/api/auth/register",{method:"POST",body:{username:username,password:password}});
+    state.authToken=result.token;
+    state.userId=String(result.user.id);
+    state.userName=result.user.name||result.user.username||username;
+    try{localStorage.setItem("splittrack_auth_token",state.authToken);}catch(e){}
+    state.roomId=""; state.roomName=""; state.setupComplete=false; state.roommates=[{id:state.userId,name:state.userName,isCurrentUser:true}]; state.expenses=[]; state.serverBalances={}; state.serverSettlements=[];
+    saveState();
+    closeModal("auth-modal-overlay");
+    var rooms=await apiFetch("/api/rooms/");
+    if(Array.isArray(rooms)&&rooms.length){
+      var room=rooms[0];
+      state.roomId=String(room.id); state.roomName=room.name||"Room"; state.setupComplete=true;
+      await syncDashboardFromBackend();
+      prepareDashboard(); showScreen("dashboard");
+    }else{
+      prepareRoomScreen(); showScreen("room");
+    }
+    showToast(authMode==="login"?"Welcome back, "+state.userName+".":"Account created. Welcome to SplitTrack.");
+  }catch(err){
+    document.getElementById("auth-form-error").textContent=err.message;
+  }finally{
+    btn.disabled=false;
+    btn.textContent=authMode==="login"?"Log in":"Create account";
+  }
+}
+
+async function bootAuth(){
+  injectAuthUI();
+  initTheme();
+  state=loadState();
+  if(state.authToken){
+    try{
+      var me=await apiFetch("/api/auth/me");
+      state.userId=String(me.id); state.userName=me.name||me.username||state.userName;
+      var rooms=await apiFetch("/api/rooms/");
+      if(Array.isArray(rooms)&&rooms.length){
+        var room=rooms[0];
+        state.roomId=String(room.id); state.roomName=room.name||"Room"; state.setupComplete=true;
+        await syncDashboardFromBackend();
+      }else{
+        state.roomId=""; state.roomName=""; state.setupComplete=false;
+        state.roommates=[{id:state.userId,name:state.userName,isCurrentUser:true}];
+      }
+      saveState();
+    }catch(err){
+      state.authToken=""; state.userId=""; state.userName=""; state.roomId=""; state.roomName=""; state.setupComplete=false;
+      try{localStorage.removeItem("splittrack_auth_token");}catch(e){}
+    }
+  }
+  var screen=state.authToken?determineScreen():"landing";
+  if(screen==="room")prepareRoomScreen();
+  if(screen==="roommates")prepareRoommatesScreen();
+  if(screen==="dashboard")prepareDashboard();
+  document.querySelectorAll(".app-screen").forEach(function(s){s.classList.remove("active","enter");});
+  var target=document.getElementById(screen+"-screen");
+  target.classList.add("active");
+  requestAnimationFrame(function(){requestAnimationFrame(function(){target.classList.add("enter");});});
+
+  ["landing-login-btn","landing-main-login"].forEach(function(id){
+    var el=document.getElementById(id); if(el) el.addEventListener("click",function(e){e.preventDefault();e.stopImmediatePropagation();openAuth("login");},true);
+  });
+  ["landing-signup-btn","landing-main-signup"].forEach(function(id){
+    var el=document.getElementById(id); if(el) el.addEventListener("click",function(e){e.preventDefault();e.stopImmediatePropagation();openAuth("signup");},true);
+  });
+
+  // Add a lightweight logout control to the existing dashboard header.
+  var head=document.querySelector(".dash-header-right");
+  if(head && !document.getElementById("auth-logout-btn")){
+    var btn=document.createElement("button");
+    btn.type="button"; btn.className="btn btn-secondary btn-sm"; btn.id="auth-logout-btn"; btn.textContent="Log out";
+    btn.addEventListener("click",async function(){
+      try{if(state.authToken) await apiFetch("/api/auth/logout",{method:"POST"});}catch(e){}
+      state=defaultState();
+      try{localStorage.removeItem("splittrack_auth_token");localStorage.removeItem(STORAGE_KEY);}catch(e){}
+      showScreen("landing");
+      showToast("Logged out.");
+    });
+    head.appendChild(btn);
+  }
+}
+
+/* ==========================================================
    BOOT
    ========================================================== */
 async function boot(){
-  initTheme(); state=loadState();
-  if(state.roomId){try{await syncDashboardFromBackend();}catch(err){console.warn("SplitTrack backend sync failed:",err.message);}}
-  saveState();
-  var screen=determineScreen();
-  if(screen==="room")prepareRoomScreen(); if(screen==="roommates")prepareRoommatesScreen(); if(screen==="dashboard")prepareDashboard();
-  document.querySelectorAll(".app-screen").forEach(function(s){s.classList.remove("active","enter");});
-  var target=document.getElementById(screen+"-screen"); target.classList.add("active");
-  requestAnimationFrame(function(){requestAnimationFrame(function(){target.classList.add("enter");});});
+  await bootAuth();
 }
 
 boot();
+
 
 })();

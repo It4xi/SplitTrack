@@ -3955,3 +3955,42 @@ html[data-theme="light"] .split-editor-row input{
     animation:none !important;
   }
 }
+
+/* ==========================================================
+   AUTHENTICATION UI
+   ========================================================== */
+.auth-modal-box{
+  width:min(100%, 440px);
+}
+.auth-subtitle{
+  color:var(--ink-dim);
+  font-size:14px;
+  line-height:1.55;
+  margin-bottom:18px;
+}
+.auth-switch{
+  text-align:center;
+  margin-top:16px;
+  color:var(--ink-faint);
+  font-size:13px;
+}
+.auth-switch-btn{
+  color:var(--gold);
+  font-weight:700;
+  text-decoration:underline;
+  text-underline-offset:3px;
+}
+.auth-switch-btn:hover{
+  opacity:.82;
+}
+.auth-form-error{
+  min-height:18px;
+  margin:-2px 0 12px;
+  color:var(--terracotta);
+  font-size:12.5px;
+  font-weight:700;
+}
+#auth-form .btn:disabled{
+  opacity:.65;
+  cursor:wait;
+}
