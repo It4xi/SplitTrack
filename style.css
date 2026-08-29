@@ -3994,3 +3994,244 @@ html[data-theme="light"] .split-editor-row input{
   opacity:.65;
   cursor:wait;
 }
+
+/* ==========================================================
+   UI CONSISTENCY + GLASS POLISH
+   ========================================================== */
+html:not([data-theme="light"]){
+  color-scheme:dark;
+}
+html[data-theme="light"]{
+  color-scheme:light;
+}
+
+/* Keep auth controls perfectly aligned with the rest of the forms. */
+.field input[type="password"]{
+  width:100%;
+  min-height:46px;
+  background:rgba(15,20,24,0.22);
+  border:1.5px solid var(--border-strong);
+  color:var(--ink);
+  padding:13px 14px;
+  border-radius:var(--radius-sm);
+  transition:
+    border-color .2s var(--ease),
+    background .2s var(--ease),
+    box-shadow .2s var(--ease),
+    transform .2s var(--ease);
+}
+
+.field input[type="password"]:focus{
+  border-color:var(--gold);
+  background:rgba(15,20,24,0.32);
+  outline:none;
+  box-shadow:0 0 0 3px rgba(238,215,161,.09);
+}
+
+html[data-theme="light"] .field input[type="password"]{
+  background:rgba(255,255,255,.56);
+  border-color:rgba(71,92,108,.22);
+  color:#24303A;
+}
+
+html[data-theme="light"] .field input[type="password"]:focus{
+  background:#FFFDF5;
+  border-color:#475C6C;
+  box-shadow:0 0 0 3px rgba(71,92,108,.11);
+}
+
+.field input[type="password"]::placeholder{
+  color:var(--ink-faint);
+}
+
+/* More deliberate, consistent micro-transitions. */
+.btn,
+.btn-icon,
+.theme-toggle,
+.field input,
+.field select,
+.field textarea,
+.toolbar input,
+.toolbar select,
+.check-row,
+.roommate-item,
+.balance-row,
+.expense-item,
+.settlement-row,
+.summary-card,
+.section,
+.roommates-panel,
+.modal-close,
+.auth-switch-btn{
+  transition:
+    transform .22s var(--ease),
+    opacity .22s var(--ease),
+    background-color .22s var(--ease),
+    border-color .22s var(--ease),
+    box-shadow .22s var(--ease),
+    color .22s var(--ease);
+}
+
+.btn:hover:not(:disabled),
+.btn-icon:hover,
+.theme-toggle:hover,
+.modal-close:hover{
+  transform:translateY(-1px);
+}
+
+.summary-card:hover,
+.section:hover,
+.roommates-panel:hover{
+  transform:translateY(-2px);
+  box-shadow:0 26px 68px rgba(0,0,0,.20), inset 0 1px 0 rgba(255,255,255,.05);
+}
+
+html[data-theme="light"] .summary-card:hover,
+html[data-theme="light"] .section:hover,
+html[data-theme="light"] .roommates-panel:hover{
+  box-shadow:0 26px 68px rgba(71,92,108,.13), inset 0 1px 0 rgba(255,255,255,.72);
+}
+
+/* Stronger glass layering so the sticky dashboard header never
+   visually bleeds through menus, selects, or scrolling content. */
+#dashboard-screen{
+  isolation:isolate;
+}
+
+#dashboard-screen .dash-header{
+  position:sticky;
+  top:0;
+  z-index:500;
+  isolation:isolate;
+  background:rgba(17,23,28,.94);
+  border-bottom:1px solid rgba(248,239,210,.16);
+  box-shadow:0 16px 34px rgba(0,0,0,.16);
+  -webkit-backdrop-filter:blur(26px) saturate(135%);
+  backdrop-filter:blur(26px) saturate(135%);
+}
+
+#dashboard-screen .dash-header::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  z-index:-1;
+  pointer-events:none;
+  background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,0));
+}
+
+#dashboard-screen .dash-body{
+  position:relative;
+  z-index:1;
+}
+
+#dashboard-screen .section,
+#dashboard-screen .summary-card{
+  isolation:isolate;
+}
+
+html[data-theme="light"] #dashboard-screen .dash-header{
+  background:rgba(248,239,210,.96);
+  border-bottom-color:rgba(71,92,108,.15);
+  box-shadow:0 16px 34px rgba(71,92,108,.12);
+}
+
+html[data-theme="light"] #dashboard-screen .dash-header::after{
+  background:linear-gradient(180deg,rgba(255,255,255,.38),rgba(255,255,255,0));
+}
+
+/* Native select menus are browser-rendered; color-scheme keeps their
+   popup aligned with the active SplitTrack theme. */
+select,
+select option{
+  color-scheme:inherit;
+}
+
+html:not([data-theme="light"]) select,
+html:not([data-theme="light"]) select option{
+  background-color:#11171C;
+  color:#F8EFD2;
+}
+
+html[data-theme="light"] select,
+html[data-theme="light"] select option{
+  background-color:#FFF8E8;
+  color:#24303A;
+}
+
+/* Keep glass controls readable over the page while a menu is open. */
+#dashboard-screen .field select,
+#dashboard-screen .toolbar select{
+  position:relative;
+  z-index:4;
+  background-clip:padding-box;
+  -webkit-backdrop-filter:blur(16px) saturate(125%);
+  backdrop-filter:blur(16px) saturate(125%);
+}
+
+/* Auth modal polish. */
+.auth-modal-box{
+  overflow:hidden;
+  transform:translateY(14px) scale(.965);
+  transition:
+    transform .34s var(--ease),
+    box-shadow .34s var(--ease),
+    opacity .24s ease;
+}
+
+.modal-overlay.open .auth-modal-box{
+  transform:translateY(0) scale(1);
+}
+
+.auth-modal-box .modal-head,
+.auth-modal-box .modal-body{
+  animation:authReveal .46s var(--ease) both;
+}
+
+.auth-modal-box .modal-body{
+  animation-delay:.035s;
+}
+
+.auth-modal-box .field{
+  transition:transform .28s var(--ease), opacity .28s ease;
+}
+
+.auth-modal-box .field:focus-within{
+  transform:translateY(-1px);
+}
+
+#auth-form .btn{
+  min-height:48px;
+}
+
+@keyframes authReveal{
+  from{ opacity:0; transform:translateY(8px); }
+  to{ opacity:1; transform:translateY(0); }
+}
+
+@media (prefers-reduced-motion:reduce){
+  .summary-card:hover,
+  .section:hover,
+  .roommates-panel:hover,
+  .btn:hover:not(:disabled),
+  .btn-icon:hover,
+  .theme-toggle:hover,
+  .modal-close:hover,
+  .auth-modal-box .field:focus-within{
+    transform:none;
+  }
+  .auth-modal-box,
+  .auth-modal-box .modal-head,
+  .auth-modal-box .modal-body{
+    animation:none !important;
+    transition:none !important;
+  }
+}
+
+.auth-modal-box .auth-field-enter{
+  animation:authFieldReveal .3s var(--ease) both;
+}
+
+@keyframes authFieldReveal{
+  from{ opacity:0; transform:translateY(-6px); }
+  to{ opacity:1; transform:translateY(0); }
+}

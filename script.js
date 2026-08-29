@@ -1148,7 +1148,13 @@ function setAuthMode(mode){
   document.getElementById("auth-submit-btn").textContent=mode==="login"?"Log in":"Create account";
   document.getElementById("auth-switch-text").textContent=mode==="login"?"New to SplitTrack?":"Already have an account?";
   document.getElementById("auth-switch-btn").textContent=mode==="login"?"Create an account":"Log in";
-  document.getElementById("auth-confirm-field").style.display=mode==="signup"?"block":"none";
+  var confirmField = document.getElementById("auth-confirm-field");
+  confirmField.style.display = mode === "signup" ? "block" : "none";
+  confirmField.classList.remove("auth-field-enter");
+  if(mode === "signup") {
+    void confirmField.offsetWidth;
+    confirmField.classList.add("auth-field-enter");
+  }
   document.getElementById("auth-password-input").setAttribute("autocomplete",mode==="login"?"current-password":"new-password");
   clearAuthErrors();
 }
