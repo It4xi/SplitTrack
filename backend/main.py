@@ -17,10 +17,15 @@ app = FastAPI(
 )
 
 
-# Allow the frontend to communicate with FastAPI
+# ==========================================================
+# CORS
+# ==========================================================
+# Allows the GitHub Pages frontend and local development
+# frontend to communicate with the FastAPI backend.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
+        "https://it4xi.github.io",
         "http://127.0.0.1:5500",
         "http://localhost:5500",
         "http://127.0.0.1:5501",
@@ -33,7 +38,9 @@ app.add_middleware(
 )
 
 
-# Register API routes
+# ==========================================================
+# ROUTES
+# ==========================================================
 app.include_router(users_router)
 app.include_router(room_router)
 app.include_router(members_router)
@@ -42,13 +49,20 @@ app.include_router(balances_router)
 app.include_router(settlements_router)
 
 
+# ==========================================================
+# HOME
+# ==========================================================
 @app.get("/")
 def home():
     return {
-        "message": "SplitTrack backend is running!"
+        "message": "SplitTrack backend is running!",
+        "version": "1.0.0"
     }
 
 
+# ==========================================================
+# HEALTH CHECK
+# ==========================================================
 @app.get("/api/health")
 def health_check():
     try:
