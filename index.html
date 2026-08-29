@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SplitTrack - Student Expense Tracker</title>
+<link rel="stylesheet" href="style.css">
+
+</head>
+<body>
+
+<div id="app">
+
+
+  <!-- ================= LANDING SCREEN ================= -->
+  <section id="landing-screen" class="app-screen active">
+    <div class="landing-wrap">
+      <nav class="landing-nav">
+        <button type="button" class="landing-brand brandmark" id="landing-brand-btn" aria-label="SplitTrack home">
+          <span class="dot"></span>SplitTrack
+        </button>
+
+        <div class="landing-nav-center">
+          <span>Expense splitting</span>
+          <span>Room management</span>
+          <span>Student friendly</span>
+        </div>
+
+        <div class="landing-nav-actions">
+          <button type="button" class="theme-toggle btn btn-secondary btn-sm" id="theme-toggle" aria-label="Toggle dark mode" title="Toggle theme"><span class="theme-icon" aria-hidden="true">☾</span><span class="theme-label">Dark</span></button>
+          <button type="button" class="btn btn-ghost" id="landing-login-btn">Log in</button>
+          <button type="button" class="btn btn-primary" id="landing-signup-btn">Sign up</button>
+        </div>
+      </nav>
+
+      <main class="landing-main">
+        <div class="landing-copy landing-reveal">
+          <div class="landing-kicker">
+            <span class="landing-kicker-dot"></span>
+            Built for students who share everything
+          </div>
+
+          <h1 class="landing-title">
+            Keep the room
+            <span>money simple.</span>
+          </h1>
+
+          <p class="landing-description">
+            Split rent, groceries, rides, dinners, and everything in between.
+            Track who paid, who owes, and what still needs settling in one calm place.
+          </p>
+
+          <div class="landing-actions">
+            <button type="button" class="btn btn-primary landing-primary-cta" id="landing-main-signup">
+              Get started
+              <span aria-hidden="true">↗</span>
+            </button>
+            <button type="button" class="btn btn-secondary landing-secondary-cta" id="landing-main-login">
+              Log in
+            </button>
+          </div>
+
+          <div class="landing-signal" aria-hidden="true">
+            <span></span><span></span><span></span><span></span><span></span>
+          </div>
+
+          <div class="landing-benefits" aria-label="SplitTrack highlights">
+            <span><b>01</b> Shared rooms</span>
+            <span><b>02</b> Smart splits</span>
+            <span><b>03</b> Clear balances</span>
+          </div>
+        </div>
+
+        <div class="landing-stage landing-reveal landing-reveal-delay" aria-label="SplitTrack product preview">
+          <div class="landing-orbit landing-orbit-a"></div>
+          <div class="landing-orbit landing-orbit-b"></div>
+
+          <div class="landing-float-bubble bubble-one" aria-hidden="true">₹ +240</div>
+          <div class="landing-float-bubble bubble-two" aria-hidden="true">3 paid</div>
+          <div class="landing-float-bubble bubble-three" aria-hidden="true">✓ Settled</div>
+
+          <div class="landing-float-card float-expense" aria-hidden="true">
+            <span class="float-expense-icon">🍕</span>
+            <span><b>Dinner</b><small>₹400 each</small></span>
+          </div>
+
+          <div class="landing-float-card float-roommate" aria-hidden="true">
+            <span class="float-avatar">L</span>
+            <span><b>Lohith paid</b><small>4 people</small></span>
+          </div>
+
+          <div class="landing-note-card landing-note-card-top">
+            <span class="landing-note-label">Room balance</span>
+            <strong>+₹240</strong>
+            <small>You're owed</small>
+          </div>
+
+          <div class="preview-card">
+            <div class="preview-window-bar">
+              <span></span><span></span><span></span>
+            </div>
+
+            <div class="preview-top">
+              <div>
+                <div class="eyebrow">ROOM 926</div>
+                <div class="preview-title">Hey, Kartheek.</div>
+              </div>
+              <span class="preview-chip">ACTIVE</span>
+            </div>
+
+            <div class="preview-main-stat">
+              <small>Group spending</small>
+              <strong>₹4,820</strong>
+              <span>Across 12 expenses</span>
+            </div>
+
+            <div class="preview-summary">
+              <div class="preview-stat">
+                <small>Your share</small>
+                <strong>₹1,205</strong>
+              </div>
+              <div class="preview-stat">
+                <small>You are owed</small>
+                <strong>₹420</strong>
+              </div>
+            </div>
+
+            <div class="preview-section-label">Recent activity</div>
+
+            <div class="preview-list">
+              <div class="preview-row">
+                <div class="preview-icon">🍜</div>
+                <div class="preview-row-main">
+                  <b>Dinner</b>
+                  <span>Kartheek paid · 3 people</span>
+                </div>
+                <div class="preview-amt">₹1,200</div>
+              </div>
+
+              <div class="preview-row">
+                <div class="preview-icon">🛒</div>
+                <div class="preview-row-main">
+                  <b>Groceries</b>
+                  <span>Lohith paid · 4 people</span>
+                </div>
+                <div class="preview-amt">₹920</div>
+              </div>
+
+              <div class="preview-row">
+                <div class="preview-icon">🚌</div>
+                <div class="preview-row-main">
+                  <b>Bus pass</b>
+                  <span>Mukesh paid · 2 people</span>
+                </div>
+                <div class="preview-amt">₹240</div>
+              </div>
+            </div>
+
+            <div class="preview-bottom">
+              <div>
+                <span class="preview-section-label">People</span>
+                <div class="preview-people">
+                  <span class="preview-person you">K</span>
+                  <span class="preview-person">L</span>
+                  <span class="preview-person">M</span>
+                  <span class="preview-person">D</span>
+                  <span class="preview-person-count">+2</span>
+                </div>
+              </div>
+
+              <div class="preview-mini-balance">
+                <small>Next settlement</small>
+                <strong>₹120</strong>
+                <span>Lohith → Kartheek</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="landing-note-card landing-note-card-bottom">
+            <span class="landing-note-symbol">✓</span>
+            <div>
+              <strong>No group-chat math</strong>
+              <small>Everything stays in one room.</small>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      <footer class="landing-foot">
+        <span>SplitTrack · Student Expense Tracker</span>
+        <span>Built with HTML, CSS and JavaScript</span>
+      </footer>
+    </div>
+  </section>
+
+  <!-- ================= WELCOME SCREEN ================= -->
+  <section id="welcome-screen" class="app-screen">
+    <div class="onboard-split-layout">
+      <div class="onboard-left welcome-left">
+        <div class="onboard-topmark">
+          <span class="brandmark"><span class="dot"></span>SplitTrack</span>
+        </div>
+
+        <div class="welcome-quote">
+          <span class="eyebrow">01 · Start simple</span>
+          <h1>Your room.<br>Your rules.</h1>
+        </div>
+
+        <div class="onboard-dialogue">
+          <div class="onboard-header">
+            <span class="eyebrow">Step 01 · Welcome</span>
+            <h2 class="display-2">What's your name?</h2>
+            <p class="lede">SplitTrack keeps shared student expenses clear and simple - split rent, groceries, and nights out without the group-chat math.</p>
+          </div>
+
+          <form id="welcome-form" novalidate>
+            <div class="field" id="welcome-name-field">
+              <label for="welcome-name-input">Your name</label>
+              <input type="text" id="welcome-name-input" placeholder="e.g. Kartheek" autocomplete="given-name" maxlength="40">
+              <p class="field-error">Enter your name to continue.</p>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-block">Continue</button>
+          </form>
+
+          <div class="step-track"><i class="current"></i><i></i><i></i></div>
+        </div>
+      </div>
+
+      <div class="onboard-right onboard-art-side welcome-art-side">
+        <div class="pixel-art-halo" aria-hidden="true"></div>
+        <div class="pixel-art-frame">
+          <img class="pixel-room-image welcome-pixel-art" src="assets/pixel-room-step1.png" alt="Pixel art shared student room">
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= CREATE ROOM SCREEN ================= -->
+  <section id="room-screen" class="app-screen">
+    <div class="onboard-split-layout">
+      <div class="onboard-left room-onboard-left">
+        <div class="onboard-topmark">
+          <span class="brandmark"><span class="dot"></span>SplitTrack</span>
+        </div>
+
+        <div class="room-quote" aria-hidden="true">
+          <span class="eyebrow">02 · Make it yours</span>
+          <h2>Name the place.</h2>
+        </div>
+
+        <div class="onboard-dialogue">
+          <div class="onboard-header">
+            <span class="eyebrow">Step 02 · Your room</span>
+            <span class="name-pill" id="room-greeting-pill">Nice to meet you 👋</span>
+            <h1 class="display-2">Create your room.</h1>
+            <p class="lede">Give your room a name - your flat, trip, or friend group. You can rename it later.</p>
+          </div>
+
+          <form id="room-form" novalidate>
+            <div class="field" id="room-name-field">
+              <label for="room-name-input">Room name</label>
+              <input type="text" id="room-name-input" placeholder="e.g. Hostel Block C" autocomplete="off" maxlength="60">
+              <p class="field-error">Enter a room name to continue.</p>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-block">Continue</button>
+          </form>
+
+          <div class="step-track"><i class="done"></i><i class="current"></i><i></i></div>
+        </div>
+      </div>
+
+      <div class="onboard-right onboard-art-side room-art-side">
+        <div class="pixel-art-halo" aria-hidden="true"></div>
+        <div class="pixel-art-frame">
+          <img class="pixel-room-image room-pixel-image" src="assets/pixel-room-step2.jpg" alt="Pixel art room for Step 02">
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= ADD ROOMMATES SCREEN ================= -->
+
+  <section id="roommates-screen" class="app-screen">
+    <div class="roommates-layout">
+      <div class="roommates-hero">
+        <span class="eyebrow">Step 03 · People</span>
+        <h1 class="display-1">Build your room.</h1>
+        <p class="lede">Add the people you'll split expenses with. You can rename or remove anyone later from your dashboard.</p>
+        <div class="roommates-hero-foot">
+          <span>⌨</span>
+          <span>Press <b style="color:var(--ink);">Enter</b> after typing a name to add them quickly.</span>
+        </div>
+      </div>
+
+      <div class="roommates-panel">
+        <div class="panel-title">Your room</div>
+        <div class="room-name-display" id="roommates-room-name">-</div>
+
+        <div class="field" style="margin-bottom:14px;">
+          <label for="roommate-name-input">Roommate name</label>
+          <div class="inline-add">
+            <input type="text" id="roommate-name-input" placeholder="e.g. Lohith" maxlength="40">
+            <button type="button" class="btn btn-secondary" id="roommate-add-btn">+ Add</button>
+          </div>
+          <p class="field-error" id="roommate-add-error"></p>
+        </div>
+
+        <div class="people-count-row">
+          <span class="panel-title" style="margin:0;">People in this room</span>
+          <span class="people-count-badge" id="roommates-count-badge">1</span>
+        </div>
+
+        <div class="roommate-list-scroll" id="roommates-list"></div>
+
+        <button type="button" class="btn btn-primary btn-block setup-finish-btn" id="roommates-finish-btn">Finish setup</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= DASHBOARD SCREEN ================= -->
+  <section id="dashboard-screen" class="app-screen">
+    <header class="dash-header">
+      <div class="dash-header-left">
+        <span class="brandmark"><span class="dot"></span>SplitTrack</span>
+        <span class="dash-room-chip">🏠 <span id="dash-room-name">Room</span></span>
+        <span class="dash-room-chip">👤 <span class="dim">Signed in as</span>&nbsp;<span id="dash-user-name">You</span></span>
+      </div>
+      <div class="dash-header-right">
+        <button type="button" class="btn btn-secondary btn-sm" id="reset-room-btn">Start over</button>
+      </div>
+    </header>
+
+    <div class="dash-body">
+      <div class="dash-greeting">
+        <span class="eyebrow">Dashboard</span>
+        <h1 class="display-1" id="dash-greeting-text" style="margin-top:10px;">Hey.</h1>
+        <p class="lede">Keep the group spending clear and simple.</p>
+      </div>
+
+      <div class="summary-grid">
+        <div class="summary-card">
+          <div class="label">Total spent</div>
+          <div class="value" id="stat-total">₹0</div>
+        </div>
+        <div class="summary-card accent">
+          <div class="label">Your share</div>
+          <div class="value" id="stat-your-share">₹0</div>
+        </div>
+        <div class="summary-card">
+          <div class="label">Expenses</div>
+          <div class="value" id="stat-count">0</div>
+        </div>
+      </div>
+
+      <!-- Expenses -->
+      <div class="section">
+        <div class="section-head">
+          <h3>Expenses</h3>
+          <div class="head-actions">
+            <button type="button" class="btn btn-primary btn-sm" id="add-expense-btn">+ Add expense</button>
+          </div>
+        </div>
+        <div class="section-body">
+          <div class="toolbar">
+            <input type="text" id="expense-search" placeholder="Search expenses...">
+            <select id="expense-filter-category">
+              <option value="">All categories</option>
+              <option>Food</option>
+              <option>Groceries</option>
+              <option>Transport</option>
+              <option>Rent</option>
+              <option>Utilities</option>
+              <option>College</option>
+              <option>Entertainment</option>
+              <option>Other</option>
+            </select>
+          </div>
+          <div class="expense-list-scroll" id="expense-list"></div>
+        </div>
+      </div>
+
+      <!-- People -->
+      <div class="section">
+        <div class="section-head">
+          <h3>People</h3>
+          <div class="head-actions">
+            <button type="button" class="btn btn-secondary btn-sm" id="bulk-remove-btn" disabled>Remove selected (0)</button>
+            <button type="button" class="btn btn-primary btn-sm" id="dash-add-roommate-btn">+ Add roommate</button>
+          </div>
+        </div>
+        <div class="section-body">
+          <div class="people-grid-head">
+            <label class="select-all-row">
+              <input type="checkbox" id="select-all-people">
+              Select all
+            </label>
+            <span class="field-hint" style="margin:0;" id="people-total-hint">1 person in this room</span>
+          </div>
+          <div id="people-list"></div>
+        </div>
+      </div>
+
+      <!-- Balances -->
+      <div class="section">
+        <div class="section-head">
+          <h3>Your balance</h3>
+        </div>
+        <div class="section-body">
+          <div class="your-balance-strip">
+            <div class="mini-stat">
+              <div class="label">You are owed</div>
+              <div class="value" id="your-owed" style="color:#a8d4b0;">₹0</div>
+            </div>
+            <div class="mini-stat">
+              <div class="label">You owe</div>
+              <div class="value" id="your-owe" style="color:var(--terracotta);">₹0</div>
+            </div>
+            <div class="mini-stat">
+              <div class="label">Net balance</div>
+              <div class="value" id="your-net">₹0</div>
+            </div>
+          </div>
+          <div class="panel-title">All balances</div>
+          <div class="balance-list" id="balance-list"></div>
+        </div>
+      </div>
+
+      <!-- Settlements -->
+      <div class="section">
+        <div class="section-head">
+          <h3>Settle up</h3>
+        </div>
+        <div class="section-body">
+          <div id="settlement-list"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<!-- ================= MODAL: EXPENSE FORM ================= -->
+<div class="modal-overlay" id="expense-modal-overlay">
+  <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="expense-modal-title">
+    <div class="modal-head">
+      <h3 id="expense-modal-title">Add expense</h3>
+      <button type="button" class="modal-close" data-close-modal="expense-modal-overlay" aria-label="Close">✕</button>
+    </div>
+    <div class="modal-body">
+      <form id="expense-form" novalidate>
+        <input type="hidden" id="expense-id-input">
+        <div class="field" id="expense-title-field">
+          <label for="expense-title-input">Expense name / description</label>
+          <input type="text" id="expense-title-input" placeholder="e.g. Dinner at Cafe Coffee Day" maxlength="80">
+          <p class="field-error">Enter a description for this expense.</p>
+        </div>
+
+        <div class="expense-meta-grid">
+          <div class="field" id="expense-amount-field" style="flex:1;">
+            <label for="expense-amount-input">Amount (₹)</label>
+            <input type="number" id="expense-amount-input" placeholder="0.00" min="0" step="0.01">
+            <p class="field-error">Enter an amount greater than 0.</p>
+          </div>
+          <div class="field" style="flex:1;">
+            <label for="expense-category-input">Category</label>
+            <select id="expense-category-input">
+              <option>Food</option>
+              <option>Groceries</option>
+              <option>Transport</option>
+              <option>Rent</option>
+              <option>Utilities</option>
+              <option>College</option>
+              <option>Entertainment</option>
+              <option>Other</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field" id="expense-paidby-field">
+          <label for="expense-paidby-input">Paid by</label>
+          <select id="expense-paidby-input"></select>
+        </div>
+
+        <div class="field" id="expense-participants-field">
+          <label>Participants</label>
+          <div id="expense-participants-list"></div>
+          <p class="field-error">Select at least one participant.</p>
+        </div>
+
+        <div class="field">
+          <label>Split type</label>
+          <div class="segmented" id="split-type-segmented">
+            <button type="button" data-split="equal" class="active">Equal</button>
+            <button type="button" data-split="exact">Exact amount</button>
+            <button type="button" data-split="percentage">Percentage</button>
+          </div>
+        </div>
+
+        <div class="field" id="split-editor-field">
+          <label id="split-editor-label">Split preview</label>
+          <div id="split-editor-list"></div>
+          <div class="split-total-row" id="split-total-row"></div>
+        </div>
+      </form>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn btn-secondary" data-close-modal="expense-modal-overlay">Cancel</button>
+      <button type="button" class="btn btn-primary" id="expense-save-btn">Save expense</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= MODAL: ADD/EDIT ROOMMATE (dashboard) ================= -->
+<div class="modal-overlay" id="roommate-modal-overlay">
+  <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="roommate-modal-title" style="max-width:400px;">
+    <div class="modal-head">
+      <h3 id="roommate-modal-title">Add roommate</h3>
+      <button type="button" class="modal-close" data-close-modal="roommate-modal-overlay" aria-label="Close">✕</button>
+    </div>
+    <div class="modal-body">
+      <form id="roommate-form" novalidate>
+        <input type="hidden" id="roommate-modal-id-input">
+        <div class="field" id="roommate-modal-name-field">
+          <label for="roommate-modal-name-input">Roommate name</label>
+          <input type="text" id="roommate-modal-name-input" placeholder="e.g. Mukesh" maxlength="40">
+          <p class="field-error">Enter a valid, unique name.</p>
+        </div>
+      </form>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn btn-secondary" data-close-modal="roommate-modal-overlay">Cancel</button>
+      <button type="button" class="btn btn-primary" id="roommate-modal-save-btn">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= MODAL: GENERIC CONFIRM ================= -->
+<div class="modal-overlay" id="confirm-modal-overlay">
+  <div class="modal-box" role="alertdialog" aria-modal="true" aria-labelledby="confirm-modal-title" style="max-width:420px;">
+    <div class="modal-head">
+      <h3 id="confirm-modal-title">Are you sure?</h3>
+      <button type="button" class="modal-close" data-close-modal="confirm-modal-overlay" aria-label="Close">✕</button>
+    </div>
+    <div class="modal-body">
+      <p class="modal-message" id="confirm-modal-message"></p>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn btn-secondary" id="confirm-modal-cancel">No, keep</button>
+      <button type="button" class="btn btn-danger" id="confirm-modal-confirm">Yes, continue</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container" aria-live="polite"></div>
+
+
+  <script src="script.js" defer></script>
+</body>
+</html>
