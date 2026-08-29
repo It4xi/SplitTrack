@@ -1,21 +1,5 @@
-# Environment secrets
 .env
 atlas-credentials.env
-
-# Python
-__pycache__/
-*.py[cod]
-*.pyo
-*.pyd
-
-# Virtual environments
-venv/
-.venv/
 backend/venv/
-
-# VS Code
-.vscode/
-
-# OS
-.DS_Store
-Thumbs.db
+__pycache__/
+*.pyc

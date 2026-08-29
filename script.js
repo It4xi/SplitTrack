@@ -12,13 +12,59 @@ var editingExpenseId = null;          // id of expense being edited, or null for
 
 function defaultState(){
   return {
+    userId: "",
     userName: "",
+    roomId: "",
     roomName: "",
     setupComplete: false,
     roommates: [],
-    expenses: []
+    expenses: [],
+    serverBalances: {},
+    serverSettlements: []
   };
 }
+
+/* ==========================================================
+   API
+   ========================================================== */
+var API_BASE = (window.SPLITTRACK_API_URL || "https://splittrack-api.onrender.com").replace(/\/$/, "");
+
+async function apiFetch(path, options){
+  var opts=options||{};
+  var headers=Object.assign({},opts.headers||{});
+  if(opts.body && typeof opts.body !== "string"){ headers["Content-Type"]="application/json"; opts=Object.assign({},opts,{body:JSON.stringify(opts.body)}); }
+  var response;
+  try{ response=await fetch(API_BASE+path,Object.assign({},opts,{headers:headers})); }catch(err){ throw new Error("Could not reach the SplitTrack backend."); }
+  var data=null; try{ data=await response.json(); }catch(e){}
+  if(!response.ok){ var detail=data&&data.detail; if(typeof detail==="object") detail=JSON.stringify(detail); throw new Error(detail||("Request failed with status "+response.status)); }
+  return data;
+}
+
+function mapApiExpense(e){
+  return {id:String(e.id),title:String(e.title||"Untitled expense"),amount:Number(e.amount)||0,paidBy:e.paid_by||null,participants:Array.isArray(e.participants)?e.participants.slice():[],splitType:["equal","exact","percentage"].indexOf(e.split_type)!==-1?e.split_type:"equal",splits:(e.splits&&typeof e.splits==="object")?e.splits:{},category:String(e.category||"Other"),createdAt:e.created_at?new Date(e.created_at).getTime():Date.now()};
+}
+
+async function syncRoomFromBackend(){
+  if(!state.roomId) return;
+  var data=await apiFetch("/api/rooms/"+encodeURIComponent(state.roomId)+"/members");
+  state.roommates=(data.members||[]).map(function(m){return {id:String(m.id),name:String(m.name||"Member"),isCurrentUser:String(m.id)===String(state.userId)};});
+  var me=currentUser(); if(me) state.userName=me.name;
+}
+
+async function syncExpensesFromBackend(){
+  if(!state.roomId) return;
+  var rows=await apiFetch("/api/expenses/"+encodeURIComponent(state.roomId));
+  state.expenses=Array.isArray(rows)?rows.map(mapApiExpense):[];
+}
+
+async function syncFinancialsFromBackend(){
+  if(!state.roomId) return;
+  var data=await Promise.all([apiFetch("/api/balances/"+encodeURIComponent(state.roomId)),apiFetch("/api/settlements/"+encodeURIComponent(state.roomId))]);
+  state.serverBalances=(data[0]&&data[0].balances)||{};
+  state.serverSettlements=(data[1]&&Array.isArray(data[1].settlements))?data[1].settlements:[];
+}
+
+async function syncDashboardFromBackend(){ await syncRoomFromBackend(); await syncExpensesFromBackend(); await syncFinancialsFromBackend(); saveState(); }
 
 /* ==========================================================
    STORAGE
@@ -30,7 +76,9 @@ function loadState(){
     var parsed = JSON.parse(raw);
     if(typeof parsed !== "object" || parsed === null) return defaultState();
     var s = defaultState();
+    if(typeof parsed.userId === "string") s.userId = parsed.userId;
     if(typeof parsed.userName === "string") s.userName = parsed.userName;
+    if(typeof parsed.roomId === "string") s.roomId = parsed.roomId;
     if(typeof parsed.roomName === "string") s.roomName = parsed.roomName;
     if(typeof parsed.setupComplete === "boolean") s.setupComplete = parsed.setupComplete;
     if(Array.isArray(parsed.roommates)){
@@ -157,8 +205,8 @@ function initTheme(){
    NAVIGATION
    ========================================================== */
 function determineScreen(){
-  if(!state.userName) return "landing";
-  if(!state.roomName) return "room";
+  if(!state.userId || !state.userName) return "landing";
+  if(!state.roomId || !state.roomName) return "room";
   if(!state.setupComplete) return "roommates";
   return "dashboard";
 }
@@ -264,21 +312,18 @@ function openConfirm(opts){
 /* ==========================================================
    ONBOARDING - WELCOME
    ========================================================== */
-document.getElementById("welcome-form").addEventListener("submit", function(e){
+document.getElementById("welcome-form").addEventListener("submit", async function(e){
   e.preventDefault();
-  var field = document.getElementById("welcome-name-field");
-  var input = document.getElementById("welcome-name-input");
-  var name = input.value.trim();
-  if(!name){
-    field.classList.add("invalid");
-    input.focus();
-    return;
-  }
+  var field=document.getElementById("welcome-name-field"), input=document.getElementById("welcome-name-input"), name=input.value.trim();
+  if(!name){field.classList.add("invalid");input.focus();return;}
   field.classList.remove("invalid");
-  state.userName = name;
-  saveState();
-  prepareRoomScreen();
-  showScreen("room");
+  var button=e.submitter||document.querySelector("#welcome-form button[type=submit]"); if(button) button.disabled=true;
+  try{
+    var user=await apiFetch("/api/users/",{method:"POST",body:{name:name}});
+    state.userId=String(user.id); state.userName=user.name||name; state.roomId=""; state.roomName="";
+    state.roommates=[{id:state.userId,name:state.userName,isCurrentUser:true}]; state.expenses=[]; state.serverBalances={}; state.serverSettlements=[]; saveState();
+    prepareRoomScreen(); showScreen("room");
+  }catch(err){showToast(err.message);} finally{if(button)button.disabled=false;}
 });
 
 function prepareRoomScreen(){
@@ -289,24 +334,18 @@ function prepareRoomScreen(){
 /* ==========================================================
    ONBOARDING - CREATE ROOM
    ========================================================== */
-document.getElementById("room-form").addEventListener("submit", function(e){
+document.getElementById("room-form").addEventListener("submit", async function(e){
   e.preventDefault();
-  var field = document.getElementById("room-name-field");
-  var input = document.getElementById("room-name-input");
-  var name = input.value.trim();
-  if(!name){
-    field.classList.add("invalid");
-    input.focus();
-    return;
-  }
+  var field=document.getElementById("room-name-field"), input=document.getElementById("room-name-input"), name=input.value.trim();
+  if(!name){field.classList.add("invalid");input.focus();return;}
+  if(!state.userId){showToast("Create your user profile first.");showScreen("welcome");return;}
   field.classList.remove("invalid");
-  state.roomName = name;
-  if(state.roommates.length === 0){
-    state.roommates.push({ id: uid("u"), name: state.userName, isCurrentUser:true });
-  }
-  saveState();
-  prepareRoommatesScreen();
-  showScreen("roommates");
+  var button=e.submitter||document.querySelector("#room-form button[type=submit]"); if(button)button.disabled=true;
+  try{
+    var room=await apiFetch("/api/rooms/",{method:"POST",body:{name:name,created_by:state.userId}});
+    state.roomId=String(room.id); state.roomName=room.name||name; state.roommates=[{id:state.userId,name:state.userName,isCurrentUser:true}]; state.expenses=[];
+    state.serverBalances={}; state.serverSettlements=[]; saveState(); await syncRoomFromBackend(); prepareRoommatesScreen(); showScreen("roommates");
+  }catch(err){showToast(err.message);} finally{if(button)button.disabled=false;}
 });
 
 /* ==========================================================
@@ -339,29 +378,15 @@ function renderRoommatesOnboardingList(){
   list.innerHTML = html;
 }
 
-function addRoommateFromOnboarding(){
-  var input = document.getElementById("roommate-name-input");
-  var errorEl = document.getElementById("roommate-add-error");
-  var name = input.value.trim();
-  errorEl.style.display = "none";
-  if(!name){
-    errorEl.textContent = "Enter a name to add a roommate.";
-    errorEl.style.display = "block";
-    input.focus();
-    return;
-  }
-  var dup = state.roommates.some(function(r){ return r.name.toLowerCase() === name.toLowerCase(); });
-  if(dup){
-    errorEl.textContent = "\"" + name + "\" is already in this room.";
-    errorEl.style.display = "block";
-    input.focus();
-    return;
-  }
-  state.roommates.push({ id: uid("u"), name: name, isCurrentUser:false });
-  saveState();
-  input.value = "";
-  renderRoommatesOnboardingList();
-  input.focus();
+async function addRoommateFromOnboarding(){
+  var input=document.getElementById("roommate-name-input"), errorEl=document.getElementById("roommate-add-error"), name=input.value.trim(); errorEl.style.display="none";
+  if(!name){errorEl.textContent="Enter a name to add a roommate.";errorEl.style.display="block";input.focus();return;}
+  if(state.roommates.some(function(r){return r.name.toLowerCase()===name.toLowerCase();})){errorEl.textContent="\""+name+"\" is already in this room.";errorEl.style.display="block";input.focus();return;}
+  try{
+    var user=await apiFetch("/api/users/",{method:"POST",body:{name:name}});
+    await apiFetch("/api/rooms/"+encodeURIComponent(state.roomId)+"/members",{method:"POST",body:{user_id:String(user.id)}});
+    state.roommates.push({id:String(user.id),name:user.name||name,isCurrentUser:false}); saveState(); input.value=""; renderRoommatesOnboardingList(); input.focus(); showToast(name+" added to the room.");
+  }catch(err){errorEl.textContent=err.message;errorEl.style.display="block";}
 }
 
 document.getElementById("roommate-add-btn").addEventListener("click", addRoommateFromOnboarding);
@@ -386,39 +411,25 @@ document.getElementById("roommates-list").addEventListener("click", function(e){
     }
   });
 });
-document.getElementById("roommates-finish-btn").addEventListener("click", function(){
-  state.setupComplete = true;
-  saveState();
-  prepareDashboard();
-  showScreen("dashboard");
+document.getElementById("roommates-finish-btn").addEventListener("click", async function(){
+  state.setupComplete=true; try{await syncDashboardFromBackend();}catch(err){showToast(err.message);} saveState(); prepareDashboard(); showScreen("dashboard");
 });
 
 /* ==========================================================
    ROOMMATE MANAGEMENT (shared: onboarding + dashboard)
    ========================================================== */
-function renameRoommate(id, newName){
-  var r = getRoommate(id);
-  if(!r) return { ok:false, error:"Roommate not found." };
-  var trimmed = newName.trim();
-  if(!trimmed) return { ok:false, error:"Enter a valid name." };
-  var dup = state.roommates.some(function(x){ return x.id !== id && x.name.toLowerCase() === trimmed.toLowerCase(); });
-  if(dup) return { ok:false, error:"That name is already in use." };
-  r.name = trimmed;
-  if(r.isCurrentUser){
-    state.userName = trimmed;
-  }
-  saveState();
-  return { ok:true };
+async function renameRoommate(id,newName){
+  var r=getRoommate(id); if(!r)return {ok:false,error:"Roommate not found."}; var trimmed=newName.trim(); if(!trimmed)return {ok:false,error:"Enter a valid name."};
+  if(state.roommates.some(function(x){return x.id!==id&&x.name.toLowerCase()===trimmed.toLowerCase();}))return {ok:false,error:"That name is already in use."};
+  try{await apiFetch("/api/rooms/"+encodeURIComponent(state.roomId)+"/members/"+encodeURIComponent(id),{method:"PUT",body:{new_name:trimmed}}); r.name=trimmed; if(r.isCurrentUser)state.userName=trimmed; saveState(); return {ok:true};}
+  catch(err){return {ok:false,error:err.message};}
 }
 
-function addRoommateDashboard(name){
-  var trimmed = name.trim();
-  if(!trimmed) return { ok:false, error:"Enter a valid name." };
-  var dup = state.roommates.some(function(x){ return x.name.toLowerCase() === trimmed.toLowerCase(); });
-  if(dup) return { ok:false, error:"That name is already in this room." };
-  state.roommates.push({ id: uid("u"), name: trimmed, isCurrentUser:false });
-  saveState();
-  return { ok:true };
+async function addRoommateDashboard(name){
+  var trimmed=name.trim(); if(!trimmed)return {ok:false,error:"Enter a valid name."};
+  if(state.roommates.some(function(x){return x.name.toLowerCase()===trimmed.toLowerCase();}))return {ok:false,error:"That name is already in this room."};
+  try{var user=await apiFetch("/api/users/",{method:"POST",body:{name:trimmed}}); await apiFetch("/api/rooms/"+encodeURIComponent(state.roomId)+"/members",{method:"POST",body:{user_id:String(user.id)}}); state.roommates.push({id:String(user.id),name:user.name||trimmed,isCurrentUser:false}); saveState(); return {ok:true};}
+  catch(err){return {ok:false,error:err.message};}
 }
 
 /* ==========================================================
@@ -535,11 +546,7 @@ document.getElementById("people-list").addEventListener("click", function(e){
       message: "Are you sure you want to remove <b>" + escapeHtml(r.name) + "</b> from this room?" + historyNote,
       confirmLabel: "Yes, remove",
       onConfirm: function(){
-        state.roommates = state.roommates.filter(function(x){ return x.id !== id; });
-        currentSelection.delete(id);
-        saveState();
-        renderDashboard();
-        showToast(r.name + " was removed from the room.");
+        apiFetch("/api/rooms/"+encodeURIComponent(state.roomId)+"/members/"+encodeURIComponent(id),{method:"DELETE"}).then(function(){state.roommates=state.roommates.filter(function(x){return x.id!==id;});currentSelection.delete(id);saveState();renderDashboard();showToast(r.name+" was removed from the room.");}).catch(function(err){showToast(err.message);});
       }
     });
   }
@@ -557,12 +564,7 @@ document.getElementById("bulk-remove-btn").addEventListener("click", function(){
     message: "Are you sure you want to remove these selected roommates from this room?<br><br><b>" + names.map(escapeHtml).join(", ") + "</b>" + bulkHistoryNote,
     confirmLabel: "Yes, remove",
     onConfirm: function(){
-      var ids = Array.from(currentSelection);
-      state.roommates = state.roommates.filter(function(r){ return ids.indexOf(r.id) === -1 || r.isCurrentUser; });
-      currentSelection.clear();
-      saveState();
-      renderDashboard();
-      showToast(ids.length + " roommates removed.");
+      var ids=Array.from(currentSelection); Promise.all(ids.map(function(id){return apiFetch("/api/rooms/"+encodeURIComponent(state.roomId)+"/members/"+encodeURIComponent(id),{method:"DELETE"});})).then(function(){state.roommates=state.roommates.filter(function(r){return ids.indexOf(r.id)===-1||r.isCurrentUser;});currentSelection.clear();saveState();renderDashboard();showToast(ids.length+" roommates removed.");}).catch(function(err){showToast(err.message);});
     }
   });
 });
@@ -588,7 +590,7 @@ function openRoommateModal(id){
   openModal("roommate-modal-overlay");
 }
 
-document.getElementById("roommate-modal-save-btn").addEventListener("click", function(){
+document.getElementById("roommate-modal-save-btn").addEventListener("click", async function(){
   var id = document.getElementById("roommate-modal-id-input").value;
   var nameInput = document.getElementById("roommate-modal-name-input");
   var field = document.getElementById("roommate-modal-name-field");
@@ -596,8 +598,8 @@ document.getElementById("roommate-modal-save-btn").addEventListener("click", fun
   var name = nameInput.value.trim();
 
   var result;
-  if(id){ result = renameRoommate(id, name); }
-  else { result = addRoommateDashboard(name); }
+  if(id){ result = await renameRoommate(id, name); }
+  else { result = await addRoommateDashboard(name); }
 
   if(!result.ok){
     errorEl.textContent = result.error;
@@ -898,75 +900,23 @@ document.getElementById("expense-form").addEventListener("keydown", function(e){
   }
 });
 
-document.getElementById("expense-save-btn").addEventListener("click", function(){
-  var titleField = document.getElementById("expense-title-field");
-  var amountField = document.getElementById("expense-amount-field");
-  var paidByField = document.getElementById("expense-paidby-field");
-  var participantsField = document.getElementById("expense-participants-field");
-  [titleField, amountField, paidByField, participantsField].forEach(function(f){ f.classList.remove("invalid"); });
-
-  var title = document.getElementById("expense-title-input").value.trim();
-  var amount = Number(document.getElementById("expense-amount-input").value);
-  var paidBy = document.getElementById("expense-paidby-input").value;
-  var category = document.getElementById("expense-category-input").value;
-  var participants = getSelectedParticipants();
-
-  var hasError = false;
-  if(!title){ titleField.classList.add("invalid"); hasError = true; }
-  if(!Number.isFinite(amount) || amount <= 0){ amountField.classList.add("invalid"); hasError = true; }
-  if(!paidBy || !getRoommate(paidBy)){ paidByField.classList.add("invalid"); hasError = true; }
-  if(participants.length === 0 || participants.some(function(id){ return !getRoommate(id); })){ participantsField.classList.add("invalid"); hasError = true; }
-  if(hasError) return;
-
-  var splits;
-  if(currentSplitType === "equal"){
-    splits = computeEqualSplit(amount, participants);
-  } else if(currentSplitType === "exact"){
-    var exactVals = {};
-    document.querySelectorAll("#split-editor-list [data-exact]").forEach(function(inp){
-      exactVals[inp.getAttribute("data-exact")] = Number(inp.value) || 0;
-    });
-    if(!validateExactSplit(amount, exactVals)){
-      showToast("Exact amounts must add up to the total.");
-      return;
-    }
-    splits = {};
-    participants.forEach(function(id){ splits[id] = clamp2(exactVals[id] || 0); });
-  } else {
-    var pctVals = {};
-    document.querySelectorAll("#split-editor-list [data-pct]").forEach(function(inp){
-      pctVals[inp.getAttribute("data-pct")] = Number(inp.value) || 0;
-    });
-    if(!validatePercentageSplit(pctVals)){
-      showToast("Percentages must add up to 100%.");
-      return;
-    }
-    splits = percentagesToSplits(amount, pctVals);
-  }
-
-  if(editingExpenseId){
-    var idx = state.expenses.findIndex(function(e){ return e.id === editingExpenseId; });
-    if(idx !== -1){
-      state.expenses[idx] = {
-        id: editingExpenseId,
-        title: title, amount: clamp2(amount), paidBy: paidBy,
-        participants: participants, splitType: currentSplitType, splits: splits,
-        category: category, createdAt: state.expenses[idx].createdAt
-      };
-    }
-    showToast("Expense updated.");
-  } else {
-    state.expenses.unshift({
-      id: uid("e"), title: title, amount: clamp2(amount), paidBy: paidBy,
-      participants: participants, splitType: currentSplitType, splits: splits,
-      category: category, createdAt: Date.now()
-    });
-    showToast("Expense added.");
-  }
-
-  saveState();
-  closeModal("expense-modal-overlay");
-  renderDashboard();
+document.getElementById("expense-save-btn").addEventListener("click", async function(){
+  var titleField=document.getElementById("expense-title-field"), amountField=document.getElementById("expense-amount-field"), paidByField=document.getElementById("expense-paidby-field"), participantsField=document.getElementById("expense-participants-field");
+  [titleField,amountField,paidByField,participantsField].forEach(function(f){f.classList.remove("invalid");});
+  var title=document.getElementById("expense-title-input").value.trim(), amount=Number(document.getElementById("expense-amount-input").value), paidBy=document.getElementById("expense-paidby-input").value, category=document.getElementById("expense-category-input").value, participants=getSelectedParticipants();
+  var bad=false; if(!title){titleField.classList.add("invalid");bad=true;} if(!Number.isFinite(amount)||amount<=0){amountField.classList.add("invalid");bad=true;} if(!paidBy||!getRoommate(paidBy)){paidByField.classList.add("invalid");bad=true;} if(!participants.length||participants.some(function(id){return !getRoommate(id);})){participantsField.classList.add("invalid");bad=true;} if(bad)return;
+  var splits={};
+  if(currentSplitType==="equal") splits=computeEqualSplit(amount,participants);
+  else if(currentSplitType==="exact"){var exactVals={};document.querySelectorAll("#split-editor-list [data-exact]").forEach(function(inp){exactVals[inp.getAttribute("data-exact")]=Number(inp.value)||0;});if(!validateExactSplit(amount,exactVals)){showToast("Exact amounts must add up to the total.");return;}participants.forEach(function(id){splits[id]=clamp2(exactVals[id]||0);});}
+  else {var pctVals={};document.querySelectorAll("#split-editor-list [data-pct]").forEach(function(inp){pctVals[inp.getAttribute("data-pct")]=Number(inp.value)||0;});if(!validatePercentageSplit(pctVals)){showToast("Percentages must add up to 100%.");return;}splits=percentagesToSplits(amount,pctVals);}
+  var payload={room_id:state.roomId,title:title,amount:clamp2(amount),category:category,paid_by:paidBy,participants:participants,split_type:currentSplitType};
+  if(currentSplitType==="exact")payload.exact_splits=splits;
+  if(currentSplitType==="percentage"){var pp={};document.querySelectorAll("#split-editor-list [data-pct]").forEach(function(inp){pp[inp.getAttribute("data-pct")]=Number(inp.value)||0;});payload.percentage_splits=pp;}
+  try{
+    var response=editingExpenseId?await apiFetch("/api/expenses/"+encodeURIComponent(editingExpenseId),{method:"PUT",body:payload}):await apiFetch("/api/expenses/",{method:"POST",body:payload});
+    var mapped=mapApiExpense(response), idx=state.expenses.findIndex(function(e){return e.id===mapped.id;}); if(idx!==-1)state.expenses[idx]=mapped; else state.expenses.unshift(mapped);
+    await syncFinancialsFromBackend(); saveState(); closeModal("expense-modal-overlay"); renderDashboard(); showToast(editingExpenseId?"Expense updated.":"Expense added.");
+  }catch(err){showToast(err.message);}
 });
 
 document.getElementById("add-expense-btn").addEventListener("click", function(){
@@ -1040,10 +990,7 @@ document.getElementById("expense-list").addEventListener("click", function(e){
       message: "Are you sure you want to remove:<br><br><b>" + escapeHtml(exp.title) + " - " + formatCurrency(exp.amount) + "</b>",
       confirmLabel: "Yes, delete",
       onConfirm: function(){
-        state.expenses = state.expenses.filter(function(x){ return x.id !== id; });
-        saveState();
-        renderDashboard();
-        showToast("Expense deleted.");
+        apiFetch("/api/expenses/"+encodeURIComponent(id),{method:"DELETE"}).then(async function(){state.expenses=state.expenses.filter(function(x){return x.id!==id;});await syncFinancialsFromBackend();saveState();renderDashboard();showToast("Expense deleted.");}).catch(function(err){showToast(err.message);});
       }
     });
   }
@@ -1053,7 +1000,7 @@ document.getElementById("expense-list").addEventListener("click", function(e){
    BALANCES / SETTLEMENTS - RENDER
    ========================================================== */
 function renderBalances(){
-  var balances = computeBalances();
+  var balances = state.serverBalances && Object.keys(state.serverBalances).length ? state.serverBalances : computeBalances();
   var me = currentUser();
 
   var youOwed = 0, youOwe = 0;
@@ -1093,8 +1040,8 @@ function renderBalances(){
 }
 
 function renderSettlements(){
-  var balances = computeBalances();
-  var settlements = computeSettlements(balances);
+  var balances = state.serverBalances && Object.keys(state.serverBalances).length ? state.serverBalances : computeBalances();
+  var settlements = Array.isArray(state.serverSettlements) ? state.serverSettlements : computeSettlements(balances);
   var el = document.getElementById("settlement-list");
   if(state.expenses.length === 0 || settlements.length === 0){
     el.innerHTML = '<div class="empty-state"><div class="glyph">✅</div><div class="title">All settled up.</div><div class="sub">No pending payments between roommates.</div></div>';
@@ -1130,20 +1077,15 @@ document.getElementById("theme-toggle").addEventListener("click", function(){
 /* ==========================================================
    BOOT
    ========================================================== */
-function boot(){
-  initTheme();
-  state = loadState();
+async function boot(){
+  initTheme(); state=loadState();
+  if(state.roomId){try{await syncDashboardFromBackend();}catch(err){console.warn("SplitTrack backend sync failed:",err.message);}}
   saveState();
-
-  var screen = determineScreen();
-  if(screen === "room") prepareRoomScreen();
-  if(screen === "roommates") prepareRoommatesScreen();
-  if(screen === "dashboard") prepareDashboard();
-
-  document.querySelectorAll(".app-screen").forEach(function(s){ s.classList.remove("active","enter"); });
-  var target = document.getElementById(screen + "-screen");
-  target.classList.add("active");
-  requestAnimationFrame(function(){ requestAnimationFrame(function(){ target.classList.add("enter"); }); });
+  var screen=determineScreen();
+  if(screen==="room")prepareRoomScreen(); if(screen==="roommates")prepareRoommatesScreen(); if(screen==="dashboard")prepareDashboard();
+  document.querySelectorAll(".app-screen").forEach(function(s){s.classList.remove("active","enter");});
+  var target=document.getElementById(screen+"-screen"); target.classList.add("active");
+  requestAnimationFrame(function(){requestAnimationFrame(function(){target.classList.add("enter");});});
 }
 
 boot();

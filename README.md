@@ -1,13 +1,7 @@
-# SplitTrack
+# SplitTrack Round 2
 
-Student Expense Tracker built with HTML, CSS, and Vanilla JavaScript.
+Frontend + FastAPI + MongoDB Atlas.
 
-## Structure
+Backend: `uvicorn backend.main:app --reload`
 
-- `index.html` - application markup and screen structure
-- `style.css` - SplitTrack Soft Brutalist / Plum Dark design system
-- `script.js` - navigation, room setup, roommate management, expenses, balances, and localStorage
-
-## Run
-
-Open `index.html` in a modern browser.
+Frontend defaults to `http://127.0.0.1:8000`.
